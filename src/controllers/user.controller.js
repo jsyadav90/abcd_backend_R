@@ -1,4 +1,5 @@
-import User from "../models/User.model.js";
+import {User} from "../models/User.model.js";
+import bcrypt from "bcrypt";  
 
 export const getUsers = async (req, res) => {
   try {
@@ -23,30 +24,96 @@ export const getUserById = async (req, res) => {
 
 
 // Create User 
+import { UserLogin } from "../models/userLogin.model.js";
+
 export const createUser = async (req, res) => {
   try {
-    const { userId, name, email } = req.body;
+    const {
+      userId,
+      name,
+      email,
+      role,
+      status,
+      designation,
+      department,
+      phone_no,
+      remarks,
+      canLogin,
+      username,
+      password,
+    } = req.body;
 
     if (!userId || !name || !email) {
       return res.status(400).json({ message: "Required fields missing" });
     }
+
+    const canLoginBool =
+      canLogin === true || canLogin === "true" || canLogin === "yes";
 
     const existingUser = await User.findOne({
       $or: [{ userId }, { email }],
     });
 
     if (existingUser) {
-      return res
-        .status(409)
-        .json({ message: "User with same ID or email already exists" });
+      return res.status(409).json({
+        message: "User with same ID or email already exists",
+      });
     }
 
-    const user = await User.create(req.body);
-    res.status(201).json(user);
+    if (canLoginBool) {
+      if (!username || !password) {
+        return res.status(400).json({
+          message: "Username & password required for login user",
+        });
+      }
+
+      const existingLogin = await UserLogin.findOne({
+        username: username.toLowerCase(),
+      });
+
+      if (existingLogin) {
+        return res.status(409).json({
+          message: "Username already exists",
+        });
+      }
+    }
+
+    // 1️⃣ Create User
+    const user = await User.create({
+      userId,
+      name,
+      email,
+      role,
+      status,
+      designation,
+      department,
+      phone_no,
+      remarks,
+      canLogin: canLoginBool,
+    });
+
+    // 2️⃣ Create UserLogin (NO manual bcrypt here)
+    if (canLoginBool) {
+      await UserLogin.create({
+        user: user._id,
+        username: username.toLowerCase(),
+        password, // 👈 plain password (model will hash)
+      });
+    }
+
+    return res.status(201).json({
+      message: "User created successfully",
+      user,
+    });
   } catch (error) {
-    res.status(500).json({ message: "User creation failed" });
+    console.error("CREATE USER ERROR:", error);
+    return res.status(500).json({
+      message: "User creation failed",
+      error: error.message,
+    });
   }
 };
+
 
 
 
