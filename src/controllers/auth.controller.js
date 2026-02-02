@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User } from "../models/User.model.js";
 import { UserLogin } from "../models/userLogin.model.js";
@@ -33,80 +33,62 @@ import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
 
 export const loginUser = async (req, res) => {
   try {
-    if (!req.body)
-      return res.status(400).json({ message: "Request body missing" });
+    const { username, password } = req.body;
 
-    let { username, password, deviceId } = req.body;
-
-    if (!username || !password) {
-      return res
-        .status(400)
-        .json({ message: "Username and password required" });
-    }
-
-    username = username.toLowerCase();
-
-    if (!user.canLogin) {
-      return res.status(403).json({
-        message: "Login disabled by admin",
-      });
-    }
-
-    // Find user login record and populate user details
-    const login = await UserLogin.findOne({
-      username: new RegExp(`^${username}$`, "i"),
+    // Fetch login record with password
+    const loginRecord = await UserLogin.findOne({
+      username: username.toLowerCase(),
     })
-      .select("+password")
+      .select("+password") // ✅ important
       .populate("user");
 
-    if (!login || !login.user) {
-      return res.status(401).json({ message: "Invalid credentials anmfba" });
+    if (!loginRecord) {
+      return res.status(401).json({ message: "No record found" });
     }
 
-    const user = login.user;
-
-    if (!user.isActive || !user.canLogin) {
-      return res.status(403).json({ message: "User not allowed to login" });
+    // Check if user can login
+    if (!loginRecord.user.canLogin) {
+      return res.status(403).json({ message: "Login disabled for this user" });
     }
 
-    // Compare password
-    const isMatch = await bcrypt.compare(password, login.password);
+    console.log("Password length:", loginRecord.password?.length);
+    console.log(
+      "Password starts with $2:",
+      loginRecord.password?.startsWith("$2"),
+    );
+    console.log("Full password:", loginRecord.password); // Should be ~60 chars, start with $2b$ or $2a$
+    // Compare passwords
+    const isMatch = await bcrypt.compare(password, loginRecord.password);
+    console.log(isMatch);
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: "Invalid username or password" });
     }
 
-    // Generate tokens
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user._id, deviceId || "default");
-
-    // Update login info
-    login.isLoggedIn = true;
-    user.lastLogin = new Date();
-
-    await login.save();
-    await user.save();
-
-    // Set refresh token in cookie
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    // Generate token
+    const token = jwt.sign(
+      { userId: loginRecord.user._id, role: loginRecord.user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" },
+    );
 
     return res.status(200).json({
-      success: true,
-      accessToken,
+      message: "Login successful",
+      token,
       user: {
-        id: user._id,
-        username: user.username,
-        role: user.role,
-        branch: user.branch || "",
+        id: loginRecord.user._id,
+        name: loginRecord.user.name,
+        userId: loginRecord.user.userId,
+        role: loginRecord.user.role,
+        canLogin: loginRecord.user.canLogin,
+        status: loginRecord.user.status,
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
+    console.error("LOGIN ERROR:", error);
+    return res.status(500).json({
+      message: "Login failed",
+      error: error.message,
+    });
   }
 };
 

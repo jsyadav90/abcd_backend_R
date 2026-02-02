@@ -1,5 +1,6 @@
-import {User} from "../models/User.model.js";
-import bcrypt from "bcrypt";  
+import {User} from "../models/user.model.js";
+// import { User } from "../models/user.model.js";
+import { UserLogin } from "../models/userLogin.model.js";
 
 export const getUsers = async (req, res) => {
   try {
@@ -24,7 +25,7 @@ export const getUserById = async (req, res) => {
 
 
 // Create User 
-import { UserLogin } from "../models/userLogin.model.js";
+// import { UserLogin } from "../models/userLogin.model.js";
 
 export const createUser = async (req, res) => {
   try {
@@ -143,48 +144,82 @@ export const deleteUser = async (req, res) => {
 };
 
 // export const toggleUserLogin = async (req, res) => {
-//   const user = await User.findById(req.params.id);
+//   try {
+//     const user = await User.findById(req.params.id);
 
-//   if (!user) {
-//     return res.status(404).json({ message: "User not found" });
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     // ❌ Block if user is inactive
+//     if (user.status === "inactive") {
+//       return res.status(403).json({
+//         message: "Login cannot be changed for inactive user",
+//       });
+//     }
+
+//     user.canLogin = !user.canLogin;
+//     await user.save();
+
+//     res.json({
+//       message: user.canLogin
+//         ? "User login enabled"
+//         : "User login disabled",
+//       canLogin: user.canLogin,
+//     });
+//   } catch (err) {
+//     res.status(500).json({ message: "Failed to update login status" });
 //   }
-
-//   user.canLogin = !user.canLogin;
-//   await user.save();
-
-//   res.json({
-//     message: user.canLogin
-//       ? "User login enabled"
-//       : "User login disabled",
-//     canLogin: user.canLogin,
-//   });
 // };
+
+// import { UserLogin } from "../models/userLogin.model.js";
 
 export const toggleUserLogin = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const { id } = req.params;
 
+    // 1️⃣ Get the user
+    const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // ❌ Block if user is inactive
-    if (user.status === "inactive") {
-      return res.status(403).json({
-        message: "Login cannot be changed for inactive user",
-      });
+    // 2️⃣ Check if login record exists
+    const existingLogin = await UserLogin.findOne({ user: user._id });
+
+    // 3️⃣ If login exists → DISABLE login
+    if (existingLogin) {
+      await UserLogin.deleteOne({ user: user._id });
+      user.canLogin = false;
+      await user.save();
+
+      return res.status(200).json({ message: "Login disabled", canLogin: false });
     }
 
-    user.canLogin = !user.canLogin;
+    // 4️⃣ ENABLE login
+    if (!user.userId) {
+      return res.status(400).json({ message: "UserId missing, cannot enable login" });
+    }
+
+    // Create login record with default password (auto hashed)
+    await UserLogin.create({
+      user: user._id,
+      username: user.userId.toLowerCase(),
+      password: "welcome@123",
+    });
+
+    // Update canLogin flag, leave status unchanged
+    user.canLogin = true;
     await user.save();
 
-    res.json({
-      message: user.canLogin
-        ? "User login enabled"
-        : "User login disabled",
-      canLogin: user.canLogin,
+    return res.status(201).json({
+      message: "Login enabled",
+      canLogin: true,
+      defaultPassword: "welcome@123",
     });
-  } catch (err) {
-    res.status(500).json({ message: "Failed to update login status" });
+
+  } catch (error) {
+    console.error("TOGGLE LOGIN ERROR:", error);
+    return res.status(500).json({ message: "Failed to toggle login", error: error.message });
   }
 };
