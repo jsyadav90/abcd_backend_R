@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import {User}  from "../models/User.model.js";
+import { User } from "../models/User.model.js";
 import { UserLogin } from "../models/userLogin.model.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
 
@@ -31,21 +31,31 @@ import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
    🔐 LOGIN USER
 ============================================================ */
 
-
 export const loginUser = async (req, res) => {
   try {
-    if (!req.body) return res.status(400).json({ message: "Request body missing" });
+    if (!req.body)
+      return res.status(400).json({ message: "Request body missing" });
 
     let { username, password, deviceId } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({ message: "Username and password required" });
+      return res
+        .status(400)
+        .json({ message: "Username and password required" });
     }
 
     username = username.toLowerCase();
 
+    if (!user.canLogin) {
+      return res.status(403).json({
+        message: "Login disabled by admin",
+      });
+    }
+
     // Find user login record and populate user details
-    const login = await UserLogin.findOne({ username: new RegExp(`^${username}$`, 'i') })
+    const login = await UserLogin.findOne({
+      username: new RegExp(`^${username}$`, "i"),
+    })
       .select("+password")
       .populate("user");
 
@@ -100,23 +110,18 @@ export const loginUser = async (req, res) => {
   }
 };
 
-
 /* ============================================================
    ♻️ REFRESH ACCESS TOKEN
 ============================================================ */
 export const refreshAccessToken = async (req, res) => {
   try {
-    const refreshToken =
-      req.cookies?.refreshToken || req.body.refreshToken;
+    const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
 
     if (!refreshToken) {
       return res.status(400).json({ message: "Refresh token missing" });
     }
 
-    const decoded = jwt.verify(
-      refreshToken,
-      process.env.REFRESH_TOKEN_KEY
-    );
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_KEY);
 
     const user = await User.findById(decoded.id);
     if (!user) {
@@ -131,7 +136,9 @@ export const refreshAccessToken = async (req, res) => {
     });
   } catch (error) {
     console.error("Refresh token error:", error);
-    return res.status(401).json({ message: "Invalid or expired refresh token" });
+    return res
+      .status(401)
+      .json({ message: "Invalid or expired refresh token" });
   }
 };
 

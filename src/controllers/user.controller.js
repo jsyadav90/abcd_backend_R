@@ -141,3 +141,50 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// export const toggleUserLogin = async (req, res) => {
+//   const user = await User.findById(req.params.id);
+
+//   if (!user) {
+//     return res.status(404).json({ message: "User not found" });
+//   }
+
+//   user.canLogin = !user.canLogin;
+//   await user.save();
+
+//   res.json({
+//     message: user.canLogin
+//       ? "User login enabled"
+//       : "User login disabled",
+//     canLogin: user.canLogin,
+//   });
+// };
+
+export const toggleUserLogin = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // ❌ Block if user is inactive
+    if (user.status === "inactive") {
+      return res.status(403).json({
+        message: "Login cannot be changed for inactive user",
+      });
+    }
+
+    user.canLogin = !user.canLogin;
+    await user.save();
+
+    res.json({
+      message: user.canLogin
+        ? "User login enabled"
+        : "User login disabled",
+      canLogin: user.canLogin,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update login status" });
+  }
+};
