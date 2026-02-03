@@ -9,11 +9,13 @@ import {
 } from "../controllers/user.controller.js";
 
 import { verifyAccessToken } from "../middlewares/auth.middleware.js"
+import { csrfProtection } from "../middlewares/csrf.middleware.js";
+
 
 const router = express.Router();
 
 router.get("/",
-  //  verifyAccessToken, 
+  //  verifyAccessToken, csrfProtection,
    getUsers);
    
 router.get("/:id", getUserById);
