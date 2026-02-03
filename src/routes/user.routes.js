@@ -15,7 +15,8 @@ import { csrfProtection } from "../middlewares/csrf.middleware.js";
 const router = express.Router();
 
 router.get("/",
-  //  verifyAccessToken, csrfProtection,
+  //  verifyAccessToken, 
+  // csrfProtection,
    getUsers);
    
 router.get("/:id", getUserById);

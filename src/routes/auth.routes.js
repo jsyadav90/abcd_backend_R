@@ -20,7 +20,9 @@ import {
 const router = express.Router();
 
 // 🔐 LOGIN
-router.post("/login", loginLimiter, loginUser);
+router.post("/login", 
+  // loginLimiter, 
+  loginUser);
 
 // 🔁 REFRESH TOKEN
 router.post(
