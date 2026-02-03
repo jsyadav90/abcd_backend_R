@@ -176,50 +176,47 @@ export const deleteUser = async (req, res) => {
 
 export const toggleUserLogin = async (req, res) => {
   try {
-    const { id } = req.params;
-
-    // 1️⃣ Get the user
-    const user = await User.findById(id);
+    const user = await User.findById(req.params.id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // 2️⃣ Check if login record exists
-    const existingLogin = await UserLogin.findOne({ user: user._id });
+    const login = await UserLogin.findOne({ user: user._id });
 
-    // 3️⃣ If login exists → DISABLE login
-    if (existingLogin) {
+    // DISABLE LOGIN
+    if (login) {
       await UserLogin.deleteOne({ user: user._id });
       user.canLogin = false;
       await user.save();
 
-      return res.status(200).json({ message: "Login disabled", canLogin: false });
+      return res.status(200).json({
+        message: "Login disabled",
+        canLogin: false,
+      });
     }
 
-    // 4️⃣ ENABLE login
-    if (!user.userId) {
-      return res.status(400).json({ message: "UserId missing, cannot enable login" });
-    }
-
-    // Create login record with default password (auto hashed)
-    await UserLogin.create({
+    // ENABLE LOGIN
+    const newLogin = await UserLogin.create({
       user: user._id,
       username: user.userId.toLowerCase(),
       password: "welcome@123",
+      canLogin: true,
     });
 
-    // Update canLogin flag, leave status unchanged
     user.canLogin = true;
     await user.save();
 
     return res.status(201).json({
       message: "Login enabled",
       canLogin: true,
+      username: newLogin.username,
       defaultPassword: "welcome@123",
     });
-
   } catch (error) {
     console.error("TOGGLE LOGIN ERROR:", error);
-    return res.status(500).json({ message: "Failed to toggle login", error: error.message });
+    return res.status(500).json({
+      message: "Failed to toggle login",
+    });
   }
 };
+

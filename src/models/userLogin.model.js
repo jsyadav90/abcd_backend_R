@@ -1,6 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 
 const userLoginSchema = new Schema(
   {
@@ -12,94 +11,33 @@ const userLoginSchema = new Schema(
     },
     username: {
       type: String,
-      trim: true,
-      lowercase: true,
       required: true,
       unique: true,
+      lowercase: true,
+      trim: true,
     },
     password: {
       type: String,
       required: true,
-      select: false,
     },
-    refreshToken: {
-      type: String,
-      select: false,
-    },
-    isLoggedIn: {
+    canLogin: {
       type: Boolean,
-      default: false,
-    },
-    lastLogin: {
-      type: Date,
+      default: true,
     },
   },
   { timestamps: true }
 );
 
-// ==============================
-// PASSWORD HASH (CRITICAL FIX)
-// ==============================
-// userLoginSchema.pre("save", async function (next) {
-//   if (!this.isModified("password")) return next();
-//   this.password = await bcrypt.hash(this.password, 10);
-//   next();
-// });
-
+// 🔐 Hash password
 userLoginSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   this.password = await bcrypt.hash(this.password, 10);
 });
 
-userLoginSchema.pre("save", async function () {
-  if (!this.isModified("password")) return;
-
-  this.password = await bcrypt.hash(this.password, 10);
-  
-});
-// userLoginSchema.pre("save", async function (next) {
-//   try {
-//     if (this.isModified("password")) {
-//       this.password = await bcrypt.hash(this.password, 10);
-//     }
-//     next();
-//   } catch (err) {
-//     next(err);
-//   }
-// });
-
-// ==============================
-// PASSWORD COMPARE
-// ==============================
-userLoginSchema.methods.comparePassword = async function (candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
+// 🔍 Compare password
+userLoginSchema.methods.comparePassword = function (password) {
+  return bcrypt.compare(password, this.password);
 };
 
-// ==============================
-// TOKEN GENERATORS
-// ==============================
-userLoginSchema.methods.generateAccessToken = function (user) {
-  return jwt.sign(
-    {
-      id: user._id,
-      username: this.username,
-      role: user.role,
-    },
-    process.env.ACCESS_TOKEN_KEY,
-    { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
-  );
-};
-
-userLoginSchema.methods.generateRefreshToken = async function () {
-  const token = jwt.sign(
-    { id: this.user },
-    process.env.REFRESH_TOKEN_KEY,
-    { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
-  );
-
-  this.refreshToken = token;
-  await this.save();
-  return token;
-};
-
-export const UserLogin = mongoose.model("UserLogin", userLoginSchema);
+export const UserLogin =
+  mongoose.models.UserLogin || mongoose.model("UserLogin", userLoginSchema);

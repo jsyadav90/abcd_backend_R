@@ -1,9 +1,5 @@
-// import { User } from "../models/User.model.js";
 import { UserLogin } from "../models/userLogin.model.js"; 
-// import { User } from "../models/User.model.js";
-import { User } from "../models/User.model.js";
-import { ApiError } from "../utils/ApiError.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
+import { User } from "../models/user.model.js";
 
 export const enableUserLogin = async (req, res) => {
   try {
