@@ -177,25 +177,17 @@ export const deleteUser = async (req, res) => {
 export const toggleUserLogin = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     const login = await UserLogin.findOne({ user: user._id });
 
-    // DISABLE LOGIN
     if (login) {
-      await UserLogin.deleteOne({ user: user._id });
+      await login.deleteOne();
       user.canLogin = false;
       await user.save();
-
-      return res.status(200).json({
-        message: "Login disabled",
-        canLogin: false,
-      });
+      return res.json({ message: "Login disabled" });
     }
 
-    // ENABLE LOGIN
     const newLogin = await UserLogin.create({
       user: user._id,
       username: user.userId.toLowerCase(),
@@ -206,17 +198,15 @@ export const toggleUserLogin = async (req, res) => {
     user.canLogin = true;
     await user.save();
 
-    return res.status(201).json({
+    res.status(201).json({
       message: "Login enabled",
-      canLogin: true,
       username: newLogin.username,
       defaultPassword: "welcome@123",
     });
-  } catch (error) {
-    console.error("TOGGLE LOGIN ERROR:", error);
-    return res.status(500).json({
-      message: "Failed to toggle login",
-    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Toggle login failed" });
   }
 };
+
 

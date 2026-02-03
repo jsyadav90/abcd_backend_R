@@ -9,7 +9,7 @@ export const verifyAccessToken = (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_KEY);
-    req.user = decoded;
+    req.user = decoded; // { id, role, branch }
 
     next();
   } catch (error) {

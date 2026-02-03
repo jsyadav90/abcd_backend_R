@@ -29,9 +29,10 @@ const userLoginSchema = new Schema(
 );
 
 // 🔐 Hash password
-userLoginSchema.pre("save", async function () {
-  if (!this.isModified("password")) return;
+userLoginSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 10);
+  next();
 });
 
 // 🔍 Compare password
