@@ -8,9 +8,14 @@ import {
   toggleUserLogin,
 } from "../controllers/user.controller.js";
 
+import { verifyAccessToken } from "../middlewares/auth.middleware.js"
+
 const router = express.Router();
 
-router.get("/", getUsers);
+router.get("/",
+  //  verifyAccessToken, 
+   getUsers);
+   
 router.get("/:id", getUserById);
 router.post("/", createUser);
 router.put("/:id", updateUser);
