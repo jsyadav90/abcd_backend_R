@@ -1,16 +1,26 @@
 import express from "express";
 import cors from "cors";
-import cookieParser from "cookie-parser"; // <-- added
+import cookieParser from "cookie-parser";
+
 import userRoutes from "./routes/user.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // <-- optional, for form data
-app.use(cookieParser()); // <-- added
+/* ✅ CORS — MUST be before routes */
+app.use(
+  cors({
+    origin: "http://localhost:5173", // frontend URL
+    credentials: true,               // allow cookies
+  })
+);
 
+/* ✅ Middlewares */
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+/* ✅ Routes */
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 
