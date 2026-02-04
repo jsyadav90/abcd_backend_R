@@ -3,20 +3,16 @@ import bcrypt from "bcrypt";
 
 const refreshTokenSchema = new Schema(
   {
-    token: {
-      type: String, // hashed refresh token
-      required: true,
-    },
+    token: { type: String, required: true },
     userAgent: String,
     ip: String,
     createdAt: {
       type: Date,
       default: Date.now,
-      expires: 60 * 60 * 24 * 30, // 30 days (TTL index)
+      expires: 60 * 60 * 24 * 30, // 30 days
     },
-    
   },
-  { _id: false },
+  { _id: false }
 );
 
 const userLoginSchema = new Schema(
@@ -32,6 +28,7 @@ const userLoginSchema = new Schema(
       type: String,
       required: true,
       unique: true,
+      trim: true,
     },
 
     password: {
@@ -39,21 +36,23 @@ const userLoginSchema = new Schema(
       required: true,
     },
 
-    refreshTokens: [refreshTokenSchema], // 🔥 multi-session support
+    refreshTokens: [refreshTokenSchema],
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
-// 🔐 Hash password
+// 🔐 hash password once
 userLoginSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   this.password = await bcrypt.hash(this.password, 10);
+  
 });
 
-// 🔍 Compare password
-userLoginSchema.methods.comparePassword = function (password) {
-  return bcrypt.compare(password, this.password);
+// 🔍 compare password
+userLoginSchema.methods.comparePassword = function (plainPassword) {
+  return bcrypt.compare(plainPassword, this.password);
 };
 
 export const UserLogin =
-  mongoose.models.UserLogin || mongoose.model("UserLogin", userLoginSchema);
+  mongoose.models.UserLogin ||
+  mongoose.model("UserLogin", userLoginSchema);

@@ -9,7 +9,7 @@ export const generateAccessToken = (user) => {
       branch: user.branch,
     },
     process.env.ACCESS_TOKEN_KEY,
-    { expiresIn: "5m" }
+    { expiresIn: "5m" } // short-lived
   );
 };
 
@@ -17,7 +17,7 @@ export const generateRefreshToken = (userId) => {
   return jwt.sign(
     { id: userId },
     process.env.REFRESH_TOKEN_KEY,
-    { expiresIn: "7d" }
+    { expiresIn: "7d" } // long-lived
   );
 };
 

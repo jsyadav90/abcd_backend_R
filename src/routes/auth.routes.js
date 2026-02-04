@@ -1,6 +1,6 @@
 import express from "express";
 import {
-  loginUser,
+  login,
   refreshAccessToken,
   logoutUser,
   logoutAllDevices,
@@ -22,12 +22,12 @@ const router = express.Router();
 // 🔐 LOGIN
 router.post("/login", 
   // loginLimiter, 
-  loginUser);
+  login);
 
 // 🔁 REFRESH TOKEN
 router.post(
   "/refresh-token",
-  refreshTokenLimiter,
+  // refreshTokenLimiter,
   refreshAccessToken
 );
 

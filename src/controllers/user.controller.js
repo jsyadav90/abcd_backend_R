@@ -133,46 +133,85 @@ export const updateUser = async (req, res) => {
 
 
 // Delete user
-export const deleteUser = async (req, res) => {
-  try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
-    res.json({ message: "User deleted successfully" }); 
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// export const toggleUserLogin = async (req, res) => {
+// export const deleteUser = async (req, res) => {
 //   try {
-//     const user = await User.findById(req.params.id);
+//     const userId = req.params.id;
 
+//     // 1. Find user first
+//     const user = await User.findById(userId);
 //     if (!user) {
 //       return res.status(404).json({ message: "User not found" });
 //     }
 
-//     // ❌ Block if user is inactive
-//     if (user.status === "inactive") {
+//     if (req.user.id === req.params.id) {
+//   return res.status(403).json({
+//     message: "You cannot delete your own account",
+//   });
+// }
+
+//     // 2. Prevent super admin deletion
+//     if (user.role === "enterprise_admin") {
 //       return res.status(403).json({
-//         message: "Login cannot be changed for inactive user",
+//         message: "System super admin cannot be deleted",
 //       });
 //     }
 
-//     user.canLogin = !user.canLogin;
-//     await user.save();
+//     // 3. Delete user login using user reference
+//     await UserLogin.findOneAndDelete({ user: userId });
 
-//     res.json({
-//       message: user.canLogin
-//         ? "User login enabled"
-//         : "User login disabled",
-//       canLogin: user.canLogin,
-//     });
+//     // 4. Delete user
+//     await User.findByIdAndDelete(userId);
+
+//     res.json({ message: "User deleted successfully" });
 //   } catch (err) {
-//     res.status(500).json({ message: "Failed to update login status" });
+//     res.status(500).json({ message: err.message });
 //   }
 // };
 
-// import { UserLogin } from "../models/userLogin.model.js";
+export const deleteUser = async (req, res) => {
+  try {
+    // auth guard
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const userId = req.params.id;
+
+    // prevent self delete
+    if (req.user.id.toString() === userId.toString()) {
+      return res.status(403).json({
+        message: "You cannot delete your own account",
+      });
+    }
+
+    // find user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // prevent enterprise admin deletion
+    if (user.role === "enterprise_admin") {
+      return res.status(403).json({
+        message: "Enterprise admin cannot be deleted",
+      });
+    }
+
+    // delete related login
+    await UserLogin.findOneAndDelete({ user: user._id });
+
+    // delete user
+    await User.findByIdAndDelete(user._id);
+
+    res.json({ message: "User deleted successfully" });
+  } catch (err) {
+    console.error("DELETE USER ERROR:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
 
 export const toggleUserLogin = async (req, res) => {
   try {
