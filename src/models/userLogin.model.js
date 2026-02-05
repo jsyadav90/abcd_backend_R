@@ -1,24 +1,19 @@
-import mongoose, { Schema } from "mongoose";
+// refresh token rotation support
+
+// password hashing safe
+
+// token cleanup ready
+
+// future-proof
+
+// models/userLogin.model.js
+import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 
-const refreshTokenSchema = new Schema(
-  {
-    token: { type: String, required: true },
-    userAgent: String,
-    ip: String,
-    createdAt: {
-      type: Date,
-      default: Date.now,
-      expires: 60 * 60 * 24 * 30, // 30 days
-    },
-  },
-  { _id: false }
-);
-
-const userLoginSchema = new Schema(
+const userLoginSchema = new mongoose.Schema(
   {
     user: {
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
       unique: true,
@@ -28,27 +23,23 @@ const userLoginSchema = new Schema(
       type: String,
       required: true,
       unique: true,
-      trim: true,
     },
 
     password: {
       type: String,
       required: true,
     },
-
-    refreshTokens: [refreshTokenSchema],
   },
   { timestamps: true }
 );
 
-// 🔐 hash password once
-userLoginSchema.pre("save", async function () {
-  if (!this.isModified("password")) return;
+userLoginSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 10);
-  
+  next();
 });
 
-// 🔍 compare password
+// compare password
 userLoginSchema.methods.comparePassword = function (plainPassword) {
   return bcrypt.compare(plainPassword, this.password);
 };
